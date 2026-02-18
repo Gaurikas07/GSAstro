@@ -14,14 +14,24 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (
+    req: any,
+    file: any,
+    cb: (error: Error | null, destination: string) => void
+  ) => {
     cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
+
+  filename: (
+    req: any,
+    file: any,
+    cb: (error: Error | null, filename: string) => void
+  ) => {
     const safeName = file.originalname.replace(/\s+/g, "-");
     cb(null, `${Date.now()}-${safeName}`);
   },
 });
+
 
 
 const upload = multer({
@@ -63,7 +73,8 @@ export default async function handler(
     await connectDB();
 
     const userId = req.body?.userId as string;
-    const file = (req as NextApiRequest & { file?: Express.Multer.File }).file;
+    const file = (req as any).file;
+
 
     if (!file || !userId) {
       return res.status(400).json({ error: "userId and image are required" });
