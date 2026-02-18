@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Chat from "@/lib/models/Chat";
 import User from "@/lib/models/User";
 import Transaction from "@/lib/models/Transaction";
+export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
