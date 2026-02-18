@@ -1,0 +1,47 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { connectDB } from '@/lib/db';
+import User from '@/lib/models/User';
+
+export const config = {
+  api: { bodyParser: false }
+};
+
+const uploadDir = path.join(process.cwd(), 'public/uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`)
+});
+
+const upload = multer({ storage });
+
+function runMiddleware(req: NextApiRequest, res: NextApiResponse, fn: (req: NextApiRequest, res: NextApiResponse, cb: (result?: unknown) => void) => void) {
+  return new Promise((resolve, reject) => {
+    fn(req, res, (result) => {
+      if (result instanceof Error) return reject(result);
+      resolve(result);
+    });
+  });
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  try {
+    await runMiddleware(req, res, upload.single('image'));
+    await connectDB();
+    const userId = (req.body?.userId || '') as string;
+    const file = (req as NextApiRequest & { file?: Express.Multer.File }).file;
+    if (!file || !userId) return res.status(400).json({ error: 'userId and image are required' });
+
+    const imagePath = `/uploads/${file.filename}`;
+    await User.findByIdAndUpdate(userId, { imagePath });
+    return res.status(200).json({ imagePath });
+  } catch (error) {
+    return res.status(500).json({ error: 'Upload failed', details: (error as Error).message });
+  }
+}
