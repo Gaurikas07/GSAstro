@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
+export const runtime = 'nodejs';
 
 export async function GET() {
   const token = getTokenFromCookies();
