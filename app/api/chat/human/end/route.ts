@@ -1,31 +1,86 @@
-import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
-import Chat from '@/lib/models/Chat';
-import User from '@/lib/models/User';
-import Transaction from '@/lib/models/Transaction';
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import Chat from "@/lib/models/Chat";
+import User from "@/lib/models/User";
+import Transaction from "@/lib/models/Transaction";
 
 export async function POST(req: Request) {
-  await connectDB();
-  const { chatId } = await req.json();
-  const chat = await Chat.findById(chatId);
-  if (!chat) return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+  try {
+    await connectDB();
 
-  const end = new Date();
-  const start = new Date(chat.startedAt || chat.createdAt);
-  const minutes = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / 60000));
-  const charge = minutes * 20;
+    const { chatId } = await req.json();
 
-  const user = await User.findById(chat.userId);
-  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!chatId) {
+      return NextResponse.json(
+        { error: "chatId required" },
+        { status: 400 }
+      );
+    }
 
-  user.balance = Math.max(0, user.balance - charge);
-  await user.save();
+    const chat = await Chat.findById(chatId);
 
-  chat.status = 'closed';
-  chat.endedAt = end;
-  await chat.save();
+    if (!chat) {
+      return NextResponse.json(
+        { error: "Chat not found" },
+        { status: 404 }
+      );
+    }
 
-  await Transaction.create({ userId: user._id, amount: charge, type: 'debit', razorpayPaymentId: `human_chat_${chatId}` });
+    if (chat.status === "closed") {
+      return NextResponse.json({
+        message: "Chat already closed",
+        charge: 0,
+      });
+    }
 
-  return NextResponse.json({ charge, minutes, balance: user.balance });
+    const end = new Date();
+    const start = new Date(chat.startedAt || chat.createdAt);
+
+    const minutes = Math.max(
+      1,
+      Math.ceil((end.getTime() - start.getTime()) / 60000)
+    );
+
+    const rate = chat.ratePerMinute || 20;
+    const charge = minutes * rate;
+
+    const user = await User.findById(chat.userId);
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    const finalCharge = Math.min(charge, user.balance);
+
+    user.balance -= finalCharge;
+    await user.save();
+
+    chat.status = "closed";
+    chat.endedAt = end;
+    chat.durationMinutes = minutes;
+    await chat.save();
+
+    await Transaction.create({
+      userId: user._id,
+      amount: finalCharge,
+      type: "debit",
+      status: "completed",
+      description: "Human astrologer session",
+      razorpayPaymentId: `human_chat_${chatId}`,
+    });
+
+    return NextResponse.json({
+      minutes,
+      charge: finalCharge,
+      balance: user.balance,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to end chat" },
+      { status: 500 }
+    );
+  }
 }
