@@ -14,21 +14,15 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 const storage = multer.diskStorage({
-  destination: (
-    _req: Express.Request,
-    _file: Express.Multer.File,
-    cb: (error: Error | null, destination: string) => void
-  ) => cb(null, uploadDir),
-
-  filename: (
-    _req: Express.Request,
-    file: Express.Multer.File,
-    cb: (error: Error | null, filename: string) => void
-  ) => {
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
     const safeName = file.originalname.replace(/\s+/g, "-");
     cb(null, `${Date.now()}-${safeName}`);
   },
 });
+
 
 const upload = multer({
   storage,
