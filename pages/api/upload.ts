@@ -1,25 +1,45 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
-import { connectDB } from '@/lib/db';
-import User from '@/lib/models/User';
+import type { NextApiRequest, NextApiResponse } from "next";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { connectDB } from "@/lib/db";
+import User from "@/lib/models/User";
 
 export const config = {
-  api: { bodyParser: false }
+  api: { bodyParser: false },
 };
 
-const uploadDir = path.join(process.cwd(), 'public/uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = path.join(process.cwd(), "public/uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`)
+  filename: (_req, file, cb) => {
+    const safeName = file.originalname.replace(/\s+/g, "-");
+    cb(null, `${Date.now()}-${safeName}`);
+  },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.mimetype)) {
+      cb(new Error("Only JPG, PNG, WEBP images allowed"));
+    } else {
+      cb(null, true);
+    }
+  },
+});
 
-function runMiddleware(req: NextApiRequest, res: NextApiResponse, fn: (req: NextApiRequest, res: NextApiResponse, cb: (result?: unknown) => void) => void) {
+function runMiddleware(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  fn: (req: NextApiRequest, res: NextApiResponse, cb: (result?: unknown) => void) => void
+) {
   return new Promise((resolve, reject) => {
     fn(req, res, (result) => {
       if (result instanceof Error) return reject(result);
@@ -28,20 +48,34 @@ function runMiddleware(req: NextApiRequest, res: NextApiResponse, fn: (req: Next
   });
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
-    await runMiddleware(req, res, upload.single('image'));
+    await runMiddleware(req, res, upload.single("image"));
     await connectDB();
-    const userId = (req.body?.userId || '') as string;
+
+    const userId = req.body?.userId as string;
     const file = (req as NextApiRequest & { file?: Express.Multer.File }).file;
-    if (!file || !userId) return res.status(400).json({ error: 'userId and image are required' });
+
+    if (!file || !userId) {
+      return res.status(400).json({ error: "userId and image are required" });
+    }
 
     const imagePath = `/uploads/${file.filename}`;
+
     await User.findByIdAndUpdate(userId, { imagePath });
+
     return res.status(200).json({ imagePath });
   } catch (error) {
-    return res.status(500).json({ error: 'Upload failed', details: (error as Error).message });
+    return res.status(500).json({
+      error: "Upload failed",
+      details: (error as Error).message,
+    });
   }
 }
