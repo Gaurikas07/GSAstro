@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
 import Chat from "@/lib/models/Chat";
 import { humanStartSchema } from "@/lib/validators";
+export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   try {
