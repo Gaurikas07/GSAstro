@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST() {
   await connectDB();
