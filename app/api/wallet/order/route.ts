@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { razorpay } from "@/lib/razorpay";
+import { getRazorpayInstance } from "@/lib/razorpay";
 import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
 import Transaction from "@/lib/models/Transaction";
@@ -42,8 +42,10 @@ export async function POST(req: Request) {
         { status: 404 }
       );
     }
+const razorpay = getRazorpayInstance();
 
-    const order = await razorpay.orders.create({
+const order = await razorpay.orders.create({
+
       amount: Math.round(numericAmount * 100),
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
