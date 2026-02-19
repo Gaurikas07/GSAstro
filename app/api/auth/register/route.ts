@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { connectDB } from "@/lib/db";
-import User from "@/lib/models/User";
+import mongoose from "mongoose";
 
-export const runtime = "nodejs";
+const MONGODB_URI = process.env.MONGODB_URI!;
+
+async function connectDB() {
+  if (mongoose.connections[0].readyState) return;
+  await mongoose.connect(MONGODB_URI);
+}
+
+const UserSchema = new mongoose.Schema({
+  email: String,
+  password: String,
+});
+
+const User =
+  mongoose.models.User || mongoose.model("User", UserSchema);
 
 export async function POST(req: Request) {
   try {
+    await connectDB();
+
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -15,8 +29,6 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    await connectDB();
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -28,17 +40,12 @@ export async function POST(req: Request) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newUser = await User.create({
+    await User.create({
       email,
       password: hashedPassword,
-      role: "user",
-      walletBalance: 0,
     });
 
-    return NextResponse.json({
-      success: true,
-      userId: newUser._id,
-    });
+    return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
       { error: "Registration failed" },
