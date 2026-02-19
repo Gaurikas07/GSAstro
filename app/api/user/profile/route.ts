@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request) {
   await connectDB();
