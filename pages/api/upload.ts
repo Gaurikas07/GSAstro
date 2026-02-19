@@ -10,9 +10,11 @@ export const config = {
 };
 
 const uploadDir = path.join(process.cwd(), "public/uploads");
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+
 const storage = multer.diskStorage({
   destination: (
     req: any,
@@ -21,7 +23,6 @@ const storage = multer.diskStorage({
   ) => {
     cb(null, uploadDir);
   },
-
   filename: (
     req: any,
     file: any,
@@ -32,29 +33,31 @@ const storage = multer.diskStorage({
   },
 });
 
-
-
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
- fileFilter: (
-  _req: any,
-  file: any,
-  cb: (error: Error | null, acceptFile?: boolean) => void
-) => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-  if (!allowedTypes.includes(file.mimetype)) {
-    cb(new Error("Only JPG, PNG, WEBP images allowed"));
-  } else {
-    cb(null, true);
-  }
-},
-
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (
+    req: any,
+    file: any,
+    cb: (error: Error | null, acceptFile?: boolean) => void
+  ) => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.mimetype)) {
+      cb(new Error("Only JPG, PNG, WEBP images allowed"));
+    } else {
+      cb(null, true);
+    }
+  },
+});
 
 function runMiddleware(
   req: NextApiRequest,
   res: NextApiResponse,
-  fn: (req: NextApiRequest, res: NextApiResponse, cb: (result?: unknown) => void) => void
+  fn: (
+    req: NextApiRequest,
+    res: NextApiResponse,
+    cb: (result?: unknown) => void
+  ) => void
 ) {
   return new Promise((resolve, reject) => {
     fn(req, res, (result) => {
@@ -78,7 +81,6 @@ export default async function handler(
 
     const userId = req.body?.userId as string;
     const file = (req as any).file;
-
 
     if (!file || !userId) {
       return res.status(400).json({ error: "userId and image are required" });
