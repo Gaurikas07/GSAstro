@@ -1,28 +1,18 @@
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI as string;
+const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
-  throw new Error("Please define the MONGODB_URI environment variable");
-}
+let cached = (global as any).mongoose;
 
-declare global {
-  // eslint-disable-next-line no-var
-  var mongooseCache: {
-    conn: typeof mongoose | null;
-    promise: Promise<typeof mongoose> | null;
-  } | undefined;
-}
-
-const cached = global.mongooseCache || { conn: null, promise: null };
-
-if (!global.mongooseCache) {
-  global.mongooseCache = cached;
+if (!cached) {
+  cached = (global as any).mongoose = { conn: null, promise: null };
 }
 
 export async function connectDB() {
-  if (cached.conn) {
-    return cached.conn;
+  if (cached.conn) return cached.conn;
+
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is not defined");
   }
 
   if (!cached.promise) {
@@ -31,12 +21,6 @@ export async function connectDB() {
     });
   }
 
-  try {
-    cached.conn = await cached.promise;
-  } catch (error) {
-    cached.promise = null;
-    throw error;
-  }
-
+  cached.conn = await cached.promise;
   return cached.conn;
 }
