@@ -3,6 +3,7 @@ import { connectDB } from '@/lib/db';
 import User from '@/lib/models/User';
 import { getTokenFromCookies, verifyToken } from '@/lib/auth';
 export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   const token = getTokenFromCookies();
