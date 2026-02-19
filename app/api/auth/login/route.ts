@@ -5,6 +5,7 @@ import User from '@/lib/models/User';
 import { loginSchema } from '@/lib/validators';
 import { signToken } from '@/lib/auth';
 export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   await connectDB();
