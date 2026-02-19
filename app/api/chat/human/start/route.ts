@@ -5,6 +5,8 @@ import Chat from "@/lib/models/Chat";
 import { humanStartSchema } from "@/lib/validators";
 export const runtime = 'nodejs';
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     await connectDB();
