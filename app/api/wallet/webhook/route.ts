@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
 import Transaction from "@/lib/models/Transaction";
 export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
